@@ -1,9 +1,8 @@
 import time
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
+# We no longer need Service or ChromeDriverManager
 
 # --- Your Personalized Job Search Keywords ---
 SEARCH_QUERIES = [
@@ -35,8 +34,13 @@ def get_jobs_from_linkedin(query: str):
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     
-    driver_service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=driver_service, options=chrome_options)
+    #
+    # === THIS IS THE FIX ===
+    # We remove the "Service" object and just call Chrome.
+    # It will automatically find the correct driver
+    # that the GitHub Action installed.
+    #
+    driver = webdriver.Chrome(options=chrome_options)
     
     search_url = f"{BASE_URL}?keywords={query.replace(' ', '%20')}&location={LOCATION_FILTER}"
     
