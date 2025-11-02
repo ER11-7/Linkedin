@@ -4,7 +4,6 @@ name: Daily Job Scraper
 # This controls WHEN the program runs
 on:
   # This makes it run at 02:00 UTC every day
-  # You can change the time. '0 2 * * *' = 2 AM UTC
   schedule:
     - cron: '0 2 * * *'
   
@@ -19,8 +18,11 @@ jobs:
 
     steps:
       # Step 1: Checks out your code from the repo
+      # We need to add persist-credentials so we can push
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       # Step 2: Sets up the Python language
       - name: Set up Python
@@ -28,7 +30,7 @@ jobs:
         with:
           python-version: '3.10'
 
-      # Step 3: Installs the Chrome browser (needed for Selenium)
+      # Step 3: Installs the Chrome browser
       - name: Install Google Chrome
         uses: browser-actions/setup-chrome@latest
 
@@ -38,6 +40,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Step 5: Runs your new scraper script!
+      # Step 5: Runs your scraper script
       - name: Run Python scraper
         run: python run_scraper.py
+
+      # --- THIS IS THE NEW STEP ---
+      # Step 6: Commits the new jobs.json file
+      - name: Commit and push updated job list
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "github-actions@github.com"
+          git add jobs.json
+          # Check if there are any changes to commit
+          if ! git diff-index --quiet HEAD -- jobs.json; then
+            git commit -m "Update daily job list"
+            git push
+          else
+            echo "No new jobs found, skipping commit."
+          fi
