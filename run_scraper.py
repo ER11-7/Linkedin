@@ -1,8 +1,8 @@
 import time
+import json  # <-- ADD THIS IMPORT
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-# We no longer need Service or ChromeDriverManager
 
 # --- Your Personalized Job Search Keywords ---
 SEARCH_QUERIES = [
@@ -34,12 +34,6 @@ def get_jobs_from_linkedin(query: str):
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     
-    #
-    # === THIS IS THE FIX ===
-    # We remove the "Service" object and just call Chrome.
-    # It will automatically find the correct driver
-    # that the GitHub Action installed.
-    #
     driver = webdriver.Chrome(options=chrome_options)
     
     search_url = f"{BASE_URL}?keywords={query.replace(' ', '%20')}&location={LOCATION_FILTER}"
@@ -59,7 +53,8 @@ def get_jobs_from_linkedin(query: str):
                 job_list.append({
                     "title": title,
                     "company": company,
-                    "link": link
+                    "link": link,
+                    "query": query # We'll save the query too
                 })
             except Exception:
                 continue
@@ -81,24 +76,26 @@ def run_scraper():
 
     for query in SEARCH_QUERIES:
         jobs = get_jobs_from_linkedin(query)
-        new_jobs_found = 0
         for job in jobs:
             if job['link'] not in unique_links:
                 all_jobs.append(job)
                 unique_links.add(job['link'])
-                new_jobs_found += 1
                 
-                # --- Print the job details to the log ---
-                print(f"\nTitle:    {job['title']}")
-                print(f"Company:  {job['company']}")
-                print(f"Link:     {job['link']}")
+                # --- We no longer need to print to the log ---
+                # print(f"\nTitle:    {job['title']}")
+                # ...etc
         
-        if new_jobs_found == 0:
-            print("...No new jobs found for this query.")
-            
     print(f"\n" + "="*40)
     print(f"Scrape Complete. Found {len(all_jobs)} total unique jobs.")
+    
+    # --- THIS IS THE NEW PART ---
+    # Save the results to a JSON file
+    with open('jobs.json', 'w') as f:
+        json.dump(all_jobs, f, indent=4)
+        
+    print("Successfully saved jobs to jobs.json")
     print("="*40)
+
 
 if __name__ == "__main__":
     run_scraper()
