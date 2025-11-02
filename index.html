@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emil's Job Feed</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 1em;
+            background-color: #f6f8fa;
+            color: #24292e;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #0366d6;
+            border-bottom: 2px solid #e1e4e8;
+            padding-bottom: 10px;
+        }
+        #status {
+            font-size: 1.1em;
+            color: #586069;
+            text-align: center;
+            padding: 20px;
+        }
+        .job-card {
+            background-color: #ffffff;
+            border: 1px solid #d1d5da;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: box-shadow 0.2s ease-in-out;
+        }
+        .job-card:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        .job-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #0366d6;
+            margin-bottom: 8px;
+        }
+        .job-company {
+            font-size: 1.1em;
+            color: #24292e;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+        .job-link {
+            display: inline-block;
+            padding: 10px 16px;
+            background-color: #2ea44f;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        .job-link:hover {
+            background-color: #2c974b;
+        }
+        .job-query {
+            font-size: 0.9em;
+            color: #586069;
+            font-style: italic;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #e1e4e8;
+        }
+        #last-updated {
+            font-size: 0.9em;
+            color: #586069;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Emil's Daily Job Feed</h1>
+        <div id="last-updated">Loading...</div>
+        <div id="status">Fetching the latest jobs...</div>
+        <div id="job-list"></div>
+    </div>
+
+    <script>
+        // This script will run when you open the page
+        document.addEventListener('DOMContentLoaded', () => {
+            const jobList = document.getElementById('job-list');
+            const status = document.getElementById('status');
+            const lastUpdated = document.getElementById('last-updated');
+
+            // --- FIX ---
+            // Detect if we are in the preview environment (which has a 'blob:' protocol)
+            // The preview cannot fetch local files and will cause an error.
+            if (window.location.protocol === 'blob:') {
+                status.textContent = 'This preview cannot load live data. Please check your deployed GitHub Pages URL to see the job list.';
+                lastUpdated.style.display = 'none';
+                console.log("Preview environment detected. Skipping fetch.");
+                return; // Stop execution
+            }
+
+            // This code will now only run on the live GitHub Pages site
+            const baseUrl = 'jobs.json';
+            
+            // We add a cache-buster so you always get the latest version
+            fetch(baseUrl + '?v=' + new Date().getTime())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok. Did the scraper run and save the file?');
+                    }
+                    // Get the 'last-modified' date from the server response
+                    const lastModified = response.headers.get('Last-Modified');
+                    if (lastModified) {
+                        lastUpdated.textContent = 'Last Updated: ' + new Date(lastModified).toLocaleString();
+                    } else {
+                        lastUpdated.textContent = 'Last Updated: Just now';
+                    }
+                    return response.json();
+                })
+                .then(jobs => {
+                    if (jobs.length === 0) {
+                        status.textContent = 'No jobs found. The scraper might be running or found no results.';
+                        return;
+                    }
+
+                    // Clear the "loading" message
+                    status.style.display = 'none';
+                    
+                    // Loop through each job and create an HTML card
+                    jobs.forEach(job => {
+                        const card = document.createElement('div');
+                        card.className = 'job-card';
+
+                        card.innerHTML = `
+                            <div class="job-title">${job.title}</div>
+                            <div class="job-company">${job.company}</div>
+                            <a class="job-link" href="${job.link}" target="_blank">Apply on LinkedIn</a>
+                            <div class="job-query">(Found via: ${job.query})</div>
+                        `;
+                        jobList.appendChild(card);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching jobs:', error);
+                    // This catch block will now only run for live site errors
+                    status.textContent = 'Error: Could not load jobs.json. Check the GitHub Action logs for errors.';
+                    lastUpdated.style.display = 'none';
+                });
+        });
+    </script>
+</body>
+</html>
+
